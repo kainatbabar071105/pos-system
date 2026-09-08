@@ -2,13 +2,15 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { put } from '@vercel/blob';
 import { authenticate } from '../middleware/auth';
 
 const router = Router();
 
-// Ensure uploads directory exists
+const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+const isVercel = process.env.VERCEL === '1';
 const uploadDir = path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadDir)) {
+if (!isVercel && !fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
@@ -35,16 +37,38 @@ const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCa
 };
 
 const upload = multer({
-  storage,
+  storage: blobToken || isVercel ? multer.memoryStorage() : storage,
   fileFilter,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB limit
 });
 
 // Upload single product image
-router.post('/', authenticate, upload.single('image'), (req: Request, res: Response) => {
+router.post('/', authenticate, upload.single('image'), async (req: Request, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No image file provided' });
+    }
+
+    if (isVercel && !blobToken) {
+      return res.status(503).json({
+        error: 'Image uploads require BLOB_READ_WRITE_TOKEN in production',
+      });
+    }
+
+    if (blobToken) {
+      const blob = await put(`products/${req.file.filename}`, req.file.buffer, {
+        access: 'public',
+        contentType: req.file.mimetype,
+        token: blobToken,
+      });
+
+      return res.json({
+        success: true,
+        imageUrl: blob.url,
+        relativePath: blob.pathname,
+        filename: req.file.filename,
+        size: req.file.size,
+      });
     }
 
     const host = req.get('host') || 'localhost:5000';

@@ -43,13 +43,14 @@ For the backend deployment, configure these environment variables:
 - `DATABASE_URL`: a reachable MongoDB Atlas connection string. The database user must have read/write access.
 - `JWT_SECRET`: a long, randomly generated production secret.
 - `FRONTEND_URL`: the deployed frontend URL, for example `https://your-frontend.vercel.app`.
+- `BLOB_READ_WRITE_TOKEN`: the Vercel Blob read/write token used for product images.
 - `NODE_ENV=production`
 
 For the frontend deployment, configure:
 
 - `VITE_API_URL`: the deployed backend API URL including `/api`, for example `https://your-backend.vercel.app/api`.
 
-Run `npm run db:push` and `npm run seed` against the production database before signing in. The current image upload endpoint writes to local disk; Vercel storage is ephemeral, so configure durable object storage before relying on product image uploads in production.
+Run `npm run db:push` and `npm run seed:native` against the production database before signing in. Product image uploads use Vercel Blob when `BLOB_READ_WRITE_TOKEN` is configured; local development continues to use the `uploads` directory.
 
 ### Demo Credentials
 - Admin: `admin@pos.io` / `admin123`

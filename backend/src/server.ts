@@ -15,11 +15,21 @@ const app = express();
  * During production:
  * FRONTEND_URL=https://your-frontend.vercel.app
  */
-const allowedOrigin = process.env.FRONTEND_URL || "*";
+const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 app.use(
   cors({
-    origin: allowedOrigin,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error("Origin is not allowed by CORS"));
+    },
     credentials: true,
   })
 );
